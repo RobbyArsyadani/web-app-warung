@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
 import { Link, useNavigate } from "react-router";
 import { db } from "../firebase";
 
@@ -25,39 +31,70 @@ const KaryawanList = () => {
   const [data, setData] = useState<Hutang[]>([]);
   const navigate = useNavigate();
 
-  const fetchData = async () => {
-    const snapshot = await getDocs(collection(db, "Hutang"));
-    const result: Hutang[] = [];
+  // const fetchData = async () => {
+  //   const snapshot = await getDocs(collection(db, "Hutang"));
+  //   const result: Hutang[] = [];
 
-    snapshot.forEach((docu) => {
-      const d = docu.data();
-      const detail: DetailHutang[] = d.detail_hutang || [];
-      const pembayaran: Pembayaran[] = d.pembayaran || [];
+  //   snapshot.forEach((docu) => {
+  //     const d = docu.data();
+  //     const detail: DetailHutang[] = d.detail_hutang || [];
+  //     const pembayaran: Pembayaran[] = d.pembayaran || [];
 
-      const totalDetail = detail.reduce(
-        (sum, item) => sum + Number(item.harga || 0),
-        0
-      );
-      const totalBayar = pembayaran.reduce(
-        (sum, item) => sum + Number(item.jumlah || 0),
-        0
-      );
-      const totalHutang = totalDetail - totalBayar;
+  //     const totalDetail = detail.reduce(
+  //       (sum, item) => sum + Number(item.harga || 0),
+  //       0
+  //     );
+  //     const totalBayar = pembayaran.reduce(
+  //       (sum, item) => sum + Number(item.jumlah || 0),
+  //       0
+  //     );
+  //     const totalHutang = totalDetail - totalBayar;
 
-      result.push({
-        id: docu.id,
-        nama: d.nama || "Tanpa Nama",
-        totalHutang,
-      });
-    });
+  //     result.push({
+  //       id: docu.id,
+  //       nama: d.nama || "Tanpa Nama",
+  //       totalHutang,
+  //     });
+  //   });
 
-    setData(result);
-  };
+  //   setData(result);
+  // };
+
+  // useEffect(() => {
+  //   fetchData();
+  // }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const unsubscribe = onSnapshot(collection(db, "Hutang"), (snapshot) => {
+      const result: Hutang[] = [];
 
+      snapshot.forEach((docu) => {
+        const d = docu.data();
+        const detail: DetailHutang[] = d.detail_hutang || [];
+        const pembayaran: Pembayaran[] = d.pembayaran || [];
+
+        const totalDetail = detail.reduce(
+          (sum, item) => sum + Number(item.harga || 0),
+          0
+        );
+        const totalBayar = pembayaran.reduce(
+          (sum, item) => sum + Number(item.jumlah || 0),
+          0
+        );
+        const totalHutang = totalDetail - totalBayar;
+
+        result.push({
+          id: docu.id,
+          nama: d.nama || "Tanpa Nama",
+          totalHutang,
+        });
+      });
+
+      setData(result);
+    });
+
+    return () => unsubscribe(); // membersihkan listener saat komponen unmount
+  }, []);
   const handleTambahUtang = (id: string) => {
     navigate(`/tambahDetailHutang/${id}`);
   };

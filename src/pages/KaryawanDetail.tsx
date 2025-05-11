@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
 interface Transaksi {
@@ -19,12 +19,11 @@ const KaryawanDetail = () => {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!id) return;
+    if (!id) return;
 
-      const docRef = doc(db, "Hutang", id);
-      const docSnap = await getDoc(docRef);
+    const docRef = doc(db, "Hutang", id);
 
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setNamaKaryawan(data.nama || "(Tanpa Nama)");
@@ -53,10 +52,8 @@ const KaryawanDetail = () => {
           });
         });
 
-        // Urutkan berdasarkan tanggal terbaru
         mergedList.sort((a, b) => b.tanggal.getTime() - a.tanggal.getTime());
 
-        // Hitung total hutang
         const totalHutang = mergedList.reduce((acc, curr) => {
           return acc + (curr.tipe === "hutang" ? curr.nominal : -curr.nominal);
         }, 0);
@@ -66,9 +63,9 @@ const KaryawanDetail = () => {
       } else {
         setNamaKaryawan("(Data tidak ditemukan)");
       }
-    };
+    });
 
-    fetchData();
+    return () => unsubscribe(); // membersihkan listener saat komponen unmount
   }, [id]);
 
   const handleLunas = async () => {
